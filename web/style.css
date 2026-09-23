@@ -1,0 +1,141 @@
+:root {
+  --bg: #0f1115;
+  --panel: #181b22;
+  --line: #262a33;
+  --fg: #e6e8ee;
+  --muted: #8b93a7;
+  --accent: #4f8cff;
+  --live: #2ecc71;
+  --danger: #ff5c5c;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bar h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .02em; }
+
+.status { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted); transition: background .2s;
+}
+.dot.on { background: var(--live); box-shadow: 0 0 0 3px rgba(46, 204, 113, .18); }
+.dot.live { background: var(--danger); box-shadow: 0 0 0 3px rgba(255, 92, 92, .22); }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px 14px;
+}
+
+.row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 9px 0; font-size: 14px;
+}
+.row + .row { border-top: 1px solid var(--line); }
+.row span, .row label { color: var(--muted); }
+.row b { font-weight: 500; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62%; }
+
+select {
+  flex: 1 1 auto; min-width: 0; max-width: 62%;
+  background: #22252d; color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 9px; font: inherit; font-size: 13px;
+  text-overflow: ellipsis;
+}
+select:disabled { opacity: .5; }
+select:focus { outline: none; border-color: var(--accent); }
+
+.note {
+  padding: 8px 0 10px; border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 12.5px;
+}
+
+.err {
+  color: var(--danger); font-size: 13px;
+  padding: 8px 0 10px; border-top: 1px solid var(--line);
+  /* 与 .note 同时出现时只保留错误那一行 */
+}
+.note:has(+ .err:not([hidden])) { display: none; }
+
+.room { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.room-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); }
+
+.switch { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; user-select: none; }
+.switch input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+.meter {
+  margin-top: 10px; height: 6px; border-radius: 3px;
+  background: #22252d; overflow: hidden;
+}
+.meter i {
+  display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--live), #b8e986);
+  transition: width .06s linear;
+}
+
+.ptt {
+  margin-top: 4px;
+  min-height: 190px;
+  border: none; border-radius: 20px;
+  background: linear-gradient(180deg, #2a63d4, #1f4bb0);
+  color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  transition: transform .08s, background .12s, box-shadow .12s;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+.ptt:disabled { opacity: .45; cursor: not-allowed; }
+.ptt:not(:disabled):active,
+.ptt.holding {
+  background: linear-gradient(180deg, #e0483f, #b8342c);
+  transform: scale(.985);
+  box-shadow: 0 0 0 6px rgba(255, 92, 92, .16), 0 8px 24px rgba(0, 0, 0, .35);
+}
+.ptt-label { font-size: 26px; font-weight: 600; letter-spacing: .04em; }
+.ptt-hint { font-size: 13px; opacity: .78; }
+
+.footer { display: flex; align-items: center; gap: 12px; }
+
+.ghost {
+  background: transparent; color: var(--fg);
+  border: 1px solid var(--line); border-radius: 9px;
+  padding: 9px 16px; font: inherit; cursor: pointer;
+}
+.ghost:disabled { opacity: .45; cursor: default; }
+
+.hint { color: var(--muted); font-size: 12px; }
+
+.log {
+  background: #0b0d11; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px; font-size: 11px; line-height: 1.45; color: var(--muted);
+  max-height: 180px; overflow: auto; margin: 0;
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>教室对讲</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+  <header class="bar">
+    <h1>教室对讲</h1>
+    <div class="status">
+      <span class="dot" id="dot-link"></span><span id="txt-link">未连接</span>
+    </div>
+  </header>
+
+  <section class="panel" id="engine-panel">
+    <div class="row">
+      <label for="sel-in">教室麦克风</label>
+      <select id="sel-in" disabled></select>
+    </div>
+    <div class="row">
+      <label for="sel-out">教室音响</label>
+      <select id="sel-out" disabled></select>
+    </div>
+    <div class="note" id="engine-note">未连接</div>
+    <div class="err" id="engine-error" hidden></div>
+  </section>
+
+  <section class="room">
+    <div class="room-head">
+      <span>教室声音</span>
+      <label class="switch">
+        <input type="checkbox" id="monitor" checked>
+        <span>监听</span>
+      </label>
+    </div>
+    <div class="meter"><i id="meter-fill"></i></div>
+  </section>
+
+  <button class="ptt" id="ptt" disabled>
+    <span class="ptt-label" id="ptt-label">按住说话</span>
+    <span class="ptt-hint" id="ptt-hint">松手即停</span>
+  </button>
+
+  <div class="footer">
+    <button class="ghost" id="start">启动音频</button>
+    <span class="hint" id="hint">
+      iOS / Android 需先点一次按钮解锁音频，浏览器才会放行麦克风。
+    </span>
+  </div>
+
+  <pre class="log" id="log" hidden></pre>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
