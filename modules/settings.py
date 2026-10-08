@@ -7,12 +7,15 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-SETTINGS_PATH = Path(__file__).resolve().parent.parent / "settings.json"
+from .paths import SETTINGS_PATH
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class DeviceSelection(BaseModel):

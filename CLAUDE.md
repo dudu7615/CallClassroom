@@ -19,6 +19,17 @@ uv run ruff check .            # 静态检查（全量规则，见 pyproject.tom
 uv run ruff format --check .   # 格式检查（改的时候去掉 --check）
 ```
 
+打 Windows 安装包（**只能在 Windows 上打**，PyInstaller 不支持交叉编译）：
+
+```powershell
+uv sync --group build
+uv run pyinstaller packaging/CallClassroom.spec --noconfirm --clean   # → dist/CallClassroom/
+ISCC.exe /DAppVersion=0.1.0 packaging\setup.iss                       # → dist/installer/*.exe
+```
+
+改图标只改根目录的 `icon.png`，派生文件（`packaging/icon.ico`、`web/icon.png`）
+要重新生成并一起提交，命令见 `packaging/README.md`。
+
 改完任何 Python 代码，**必须**跑 `uv run basedpyright`、`uv run ruff check .` 和 `uv run pytest -q`。
 
 ## 硬性规范
@@ -93,11 +104,21 @@ WebSocket 协议（`/ws`）的完整定义在 `modules/server.py` 的模块文�
    设备时把名字解析成索引，解析不到就退回系统默认并在页面标出。改这块时别顺手
    把索引写进 `settings.json`。
 
+10. **打包后"程序资源"和"用户数据"不在一个地方**。`modules/paths.py` 把这件事
+    定死了：`web/` 这类只读资源用 `__file__` 相对定位（PyInstaller 会把打包进去
+    的模块的 `__file__` 设成解包目录下的绝对路径，所以 `server.py` 的 `WEB_DIR`
+    **不用改**，但 spec 里 data 的 dest 必须写成 `web` 才对齐）；`settings.json`
+    / `.certs` / 日志这类要写的东西一律走 `DATA_DIR`，打包后落到
+    `%LOCALAPPDATA%\CallClassroom`，**不要**再写 `Path(__file__).parent.parent`。
+    另外打包后 `sys.stderr` 是 `None`（spec 里 `console=False`），往 stderr 挂
+    loguru sink 之前必须先判空，否则启动即崩。
+
 ## 文件地图
 
 | 文件 | 职责 |
 |---|---|
 | `main.py` | 参数解析、自签证书生成、uvicorn 启动 |
+| `modules/paths.py` | 运行期目录解析：程序资源 vs 用户数据（打包后落到 `%LOCALAPPDATA%`） |
 | `modules/audio.py` | `AudioEngine`：sounddevice 采集/播放 + 订阅分发 |
 | `modules/server.py` | FastAPI 应用、`AudioHub` 连接管理、WebSocket 协议 |
 | `modules/settings.py` | 教室设备选择的持久化（`settings.json`，已 gitignore） |
@@ -105,6 +126,10 @@ WebSocket 协议（`/ws`）的完整定义在 `modules/server.py` 的模块文�
 | `typings/sounddevice.pyi` | sounddevice 类型桩（上游无 `py.typed`） |
 | `web/app.js` | 采集、播放排程、按住说话、教室设备选择 |
 | `web/pcm-worklet.js` | 采集侧 AudioWorklet：重采样到服务端采样率 + 按压门控 |
+| `packaging/CallClassroom.spec` | PyInstaller 打包配置（onedir） |
+| `packaging/setup.iss` | Inno Setup 安装脚本（per-user 装到 `%LOCALAPPDATA%`） |
+| `packaging/icon.ico` | exe/安装器图标，由根目录 `icon.png` 派生（见 `packaging/README.md`） |
+| `.github/workflows/release.yml` | 合并进 main 出安装包 + 便携版 |
 | `tests/test_audio.py` | 音频引擎与连接管理测试（假造声卡回调数据） |
 | `tests/test_settings.py` | 设备选择持久化测试 |
 

@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from .paths import LOG_PATH
+
 if TYPE_CHECKING:
     from types import FrameType
 
@@ -51,13 +53,31 @@ class _InterceptHandler(logging.Handler):
 def setup_logging(*, verbose: bool = False) -> None:
     """安装 loguru 输出并接管 uvicorn 的日志。"""
     logger.remove()
-    logger.add(
-        sys.stderr,
-        level="DEBUG" if verbose else "INFO",
-        format=_FORMAT,
-        # 不写死 colorize：终端里上色，重定向到文件时自动去掉 ANSI 码
-        backtrace=verbose,
-    )
+    level = "DEBUG" if verbose else "INFO"
+
+    # 打包后是窗口程序（PyInstaller 的 console=False），此时 sys.stderr 是
+    # None，直接 add 会抛错，所以只在有终端时才挂 stderr。
+    if sys.stderr is not None:
+        logger.add(
+            sys.stderr,
+            level=level,
+            format=_FORMAT,
+            # 不写死 colorize：终端里上色，重定向到文件时自动去掉 ANSI 码
+            backtrace=verbose,
+        )
+
+    # 没有终端就没有任何输出可看，日志必须落盘，否则出错时无从排查
+    if getattr(sys, "frozen", False):
+        logger.add(
+            LOG_PATH,
+            level=level,
+            format=_FORMAT,
+            rotation="5 MB",
+            retention=3,
+            encoding="utf-8",
+            # 声卡回调跑在 PortAudio 的实时线程上，写盘不能阻塞它（见 CLAUDE.md 坑#5）
+            enqueue=True,
+        )
 
     handler = _InterceptHandler()
     for name in _INTERCEPTED:

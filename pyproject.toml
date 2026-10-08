@@ -22,6 +22,11 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.10",
 ]
+# 打包用，不属于日常开发，所以单独一组、默认不装（`uv sync --group build`）。
+# PyInstaller 6.15 起才支持 Python 3.14。
+build = [
+    "pyinstaller>=6.15",
+]
 
 [tool.pytest.ini_options]
 # 让 `uv run pytest` 能 import 到 modules/：测试文件在 tests/ 下，pytest 只会把

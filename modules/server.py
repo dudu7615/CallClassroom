@@ -42,6 +42,10 @@ from .settings import DeviceSelection, SettingsStore
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+# 静态页面用 __file__ 相对定位：源码运行时指向仓库根的 web/，打包后 PyInstaller
+# 会把 __file__ 设成 _internal/modules/server.py，往上两层正好是 _internal/，
+# 因此 spec 里 web/ 的 dest 必须写成 "web" 才对齐。别改成 sys._MEIPASS——
+# 那个变量在源码运行时不存在。
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 OUT_QUEUE_MAX = 50

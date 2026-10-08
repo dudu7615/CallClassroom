@@ -14,6 +14,7 @@ import argparse
 import datetime as dt
 import ipaddress
 import socket
+import sys
 from pathlib import Path
 
 import uvicorn
@@ -24,8 +25,12 @@ from cryptography.x509.oid import NameOID
 from loguru import logger
 
 from modules.logsetup import setup_logging
+from modules.paths import CERT_DIR
 
-CERT_DIR = Path(__file__).resolve().parent / ".certs"
+# 顶层导入而不是把 "modules.server:app" 字符串丢给 uvicorn：PyInstaller 靠静态
+# 分析收集模块，看不见字符串形式的引用，打包后会 ModuleNotFoundError。
+# --reload 仍然需要字符串（uvicorn 靠重新导入来实现热重载），所以下面二选一。
+from modules.server import app as asgi_app
 
 #: 自签证书的有效期。不求真"永久"（有效期离谱的证书浏览器会报错），十年足够
 #: 覆盖一台教室电脑的服役期，而且生成一次就不再重签。
@@ -170,6 +175,11 @@ def main() -> None:
     parser.add_argument("-v", "--verbose", action="store_true", help="打印调试日志")
     args = parser.parse_args()
 
+    if args.reload and getattr(sys, "frozen", False):
+        # uvicorn 的热重载靠反复重启解释器跑同一个入口实现，打包成 exe 后没有
+        # 可重启的入口，开了只会得到一个莫名其妙的错误，不如直接说清楚。
+        parser.error("打包后的程序不支持 --reload")
+
     setup_logging(verbose=args.verbose)
 
     cert, key = args.cert, args.key
@@ -187,7 +197,9 @@ def main() -> None:
     announce(args.port, tls=cert is not None)
 
     uvicorn.run(
-        "modules.server:app",
+        # --reload 只能配字符串（uvicorn 要按名字重新导入），其余情况传对象，
+        # 免得走一遍动态导入。
+        "modules.server:app" if args.reload else asgi_app,
         host=args.host,
         port=args.port,
         reload=args.reload,

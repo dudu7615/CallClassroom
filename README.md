@@ -88,6 +88,36 @@ uv run main.py --reload        # 开发模式，改代码自动重启
 openssl** 或别的外部命令；除了 PortAudio（见上一节，且没装也只是没声音），
 `uv sync` 之后就能直接跑。
 
+## Windows 安装包
+
+给教室那台没有 Python 的机器用。**合并进 `main` 后 GitHub Actions 会自动打包**，
+产物在 Actions 的 Artifacts 里；`pyproject.toml` 的 `version` 是新的（还没有同名
+tag）时会顺带建一个 Release。所以发版本的流程就是：在 PR 里改 `version` → 合并。
+
+产物有两个：
+
+- `CallClassroom-Setup-<版本>.exe` —— 安装包
+- `CallClassroom-portable-<版本>.zip` —— 免安装版，解压双击 `CallClassroom.exe`
+
+本机手动打（**只能在 Windows 上打，PyInstaller 不支持交叉编译**）：
+
+```powershell
+uv sync --group build
+uv run pyinstaller packaging/CallClassroom.spec --noconfirm --clean
+```
+
+安装包的行为：
+
+- 装到 `%LOCALAPPDATA%\Programs\CallClassroom`，**只对当前用户、不弹 UAC**。
+- 默认创建桌面快捷方式，并且**默认开机自启**（装的时候可以取消勾选）。
+- 卸载不会动用户数据。设备和证书都放在 `%LOCALAPPDATA%\CallClassroom`，
+  与安装目录分开，所以覆盖安装和卸载都不会丢。
+
+⚠️ **首次运行 Windows 会弹一次"是否允许 CallClassroom 访问网络"，要点"允许"。**
+不点的话本机访问正常、但局域网里其他设备连不上——因为安装过程不提权，装不了
+防火墙规则。另外程序是**没有窗口的后台服务**，出问题看不到任何提示，日志在
+`%LOCALAPPDATA%\CallClassroom\callclassroom.log`。
+
 ## ⚠️ 跨设备访问必须用 HTTPS
 
 浏览器只在**安全上下文**下开放 `getUserMedia`（麦克风）和 `AudioWorklet`。
@@ -169,8 +199,10 @@ uv run pytest -q
 
 ```
 main.py                启动入口（参数解析、自签证书、uvicorn）
+icon.png               应用图标源图（1024×1024，派生文件见 packaging/README.md）
 pyrightconfig.json     类型检查配置（strict）
 settings.json          本机选定的教室设备（自动生成，已 gitignore）
+modules/paths.py       运行期目录解析（程序资源 vs 用户数据，打包后分开）
 modules/audio.py       sounddevice 采集/播放引擎
 modules/server.py      FastAPI 应用、WebSocket 协议、连接管理
 modules/settings.py    设备选择的持久化
@@ -179,6 +211,9 @@ typings/sounddevice.pyi  sounddevice 类型桩
 web/index.html         操作者页面
 web/app.js             采集、播放排程、按住说话、设备选择
 web/pcm-worklet.js     采集侧 AudioWorklet（重采样 + 门控）
+web/icon.png           网页图标（由 icon.png 派生）
+packaging/             Windows 打包（PyInstaller spec + Inno Setup 脚本 + 图标）
+.github/workflows/     CI（合并进 main 出安装包）
 tests/test_audio.py    音频引擎与连接管理测试
 tests/test_settings.py 设备选择持久化测试
 ```
