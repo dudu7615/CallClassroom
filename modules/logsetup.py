@@ -8,9 +8,12 @@ uvicorn 的访问日志仍然走标准库，所以这里挂一个 handler 把它
 import inspect
 import logging
 import sys
-from types import FrameType
+from typing import TYPE_CHECKING
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from types import FrameType
 
 _FORMAT = (
     "<green>{time:YY-MM-DD HH:mm:ss}</green> | "

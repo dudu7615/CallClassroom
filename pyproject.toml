@@ -19,4 +19,41 @@ dependencies = [
 dev = [
     "basedpyright>=1.40.1",
     "pytest>=9.1.1",
+    "ruff>=0.16.10",
 ]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+# 全量规则。真 bug（F）、风格（E/W）、现代化（UP）、安全（S）、
+# 命名（N）、简化（SIM）、禁 print（T20）等全部开启。
+select = ["ALL"]
+# 下面这些不是"待还的债"，而是与本项目既定设计直接冲突、只能放行的：
+ignore = [
+    "D",      # 文档串规范：本项目的文档/注释用中文且不以句号结尾，也不强制每个公开函数都写
+    "CPY001", # 版权头：项目只有 LICENSE，不在每个源文件顶部放版权声明
+    "BLE001", # 裸 except Exception：声卡降级、可选依赖探测一律靠它兜底（无声卡模式）
+    "S112",   # try-except-continue：见 AudioEngine.pick_rate()，逐个采样率试探本就该 continue
+    "ANN401", # Any：CFFI 回调的 time/status 是 C 结构体，桩里的 **kwargs 也只能是 Any
+    "S104",   # 绑定 0.0.0.0：这是局域网对讲工具，监听全网卡是产品设计
+    "S603",   # subprocess：openssl 传的是固定参数列表，无外部输入
+    # 与 `ruff format` 冲突、官方要求关闭的两条（否则会和格式化器反复推翻彼此）
+    "COM812",
+    "ISC001",
+]
+# 中文全角标点被 RUF001/002/003 判为"歧义字符"。逐个精确放行，
+# 而不是整条关掉——这样西里尔字母等同形字符依然会报警。
+allowed-confusables = ["，", "。", "、", "：", "；", "（", "）", "！", "？", "／"]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试：assert 是 pytest 的本分；访问私有成员是这里写明的测试手段（见 CLAUDE.md 测试约定）
+"tests/**" = [
+    "S101", "SLF001", "PLR2004", "FBT003", "ARG001",
+    "EM101", "TRY003", "PT018", "INP001", "TC003",
+]
+# 声卡的延迟导入是刻意的（CLAUDE.md 坑#4：没装 PortAudio 时顶层 import 会直接抛错）
+"modules/audio.py" = ["PLC0415"]
+# 类型桩里保留模块文档串，对看桩的人有价值
+"typings/*.pyi" = ["PYI021"]

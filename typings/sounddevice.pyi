@@ -3,11 +3,12 @@
 只声明本项目实际用到的部分：输入/输出流、设备查询。
 """
 
-from typing import Any, Callable, overload
+from collections.abc import Callable
+from typing import Any, overload
 
-_Buffer = Any  # sounddevice 回调收到的是 numpy 数组，细节由调用方按 dtype 断言
-_Callback = Callable[[_Buffer, int, Any, Any], None]
-_Device = int | str | None
+type _Buffer = Any  # 回调收到的是 numpy 数组，细节由调用方按 dtype 断言
+type _Callback = Callable[[_Buffer, int, Any, Any], None]
+type _Device = int | str | None
 
 class InputStream:
     device: int | str | None

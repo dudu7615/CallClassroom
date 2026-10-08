@@ -173,12 +173,12 @@ def test_mic_forwarding_pauses_while_talking() -> None:
         mic.put_nowait(b"room-1")
         assert await asyncio.wait_for(q.get(), 1) == b"room-1"
 
-        assert hub.set_talking(q, True) is True
+        assert hub.set_talking(q, on=True) is True
         mic.put_nowait(b"room-2")
         await asyncio.sleep(0.05)
         assert q.empty(), "喊话时不应收到教室声音"
 
-        assert hub.set_talking(q, False) is True
+        assert hub.set_talking(q, on=False) is True
         mic.put_nowait(b"room-3")
         assert await asyncio.wait_for(q.get(), 1) == b"room-3"
 
@@ -190,10 +190,10 @@ def test_mic_forwarding_pauses_while_talking() -> None:
 def test_talking_state_change_is_reported_once() -> None:
     hub = AudioHub(AudioEngine())
     q: asyncio.Queue[bytes | str] = asyncio.Queue()
-    assert hub.set_talking(q, True) is True
-    assert hub.set_talking(q, True) is False, "重复按下不该再广播一次"
+    assert hub.set_talking(q, on=True) is True
+    assert hub.set_talking(q, on=True) is False, "重复按下不该再广播一次"
     assert hub.talking is True
-    assert hub.set_talking(q, False) is True
+    assert hub.set_talking(q, on=False) is True
     assert hub.talking is False
 
 
@@ -203,7 +203,7 @@ def test_disconnect_releases_talking_flag() -> None:
     async def scenario() -> None:
         hub = AudioHub(AudioEngine())
         q = await hub.connect()
-        hub.set_talking(q, True)
+        hub.set_talking(q, on=True)
         await hub.disconnect(q)
         assert hub.talking is False
         assert hub._pump is None, "最后一个客户端走了应停掉麦克风泵"
@@ -353,9 +353,7 @@ def test_pick_rate_prefers_highest_supported(monkeypatch: pytest.MonkeyPatch) ->
         if kwargs["samplerate"] not in (48000, 44100):
             raise RuntimeError("Invalid sample rate")
 
-    fake = types.SimpleNamespace(
-        check_input_settings=fake_check, check_output_settings=fake_check
-    )
+    fake = types.SimpleNamespace(check_input_settings=fake_check, check_output_settings=fake_check)
     monkeypatch.setitem(sys.modules, "sounddevice", fake)
 
     assert AudioEngine.pick_rate(None, None) == 48000, "应挑最高的可用采样率"
@@ -379,9 +377,7 @@ def test_pick_rate_falls_back_when_nothing_works(monkeypatch: pytest.MonkeyPatch
     def always_fail(**kwargs: float) -> None:
         raise RuntimeError("nope")
 
-    fake = types.SimpleNamespace(
-        check_input_settings=always_fail, check_output_settings=always_fail
-    )
+    fake = types.SimpleNamespace(check_input_settings=always_fail, check_output_settings=always_fail)
     monkeypatch.setitem(sys.modules, "sounddevice", fake)
 
     assert AudioEngine.pick_rate(None, None) == RATE

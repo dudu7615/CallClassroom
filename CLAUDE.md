@@ -14,9 +14,11 @@ uv run main.py                 # 启动（默认 0.0.0.0:8000）
 uv run main.py --tls --reload  # 自签证书 + 热重载
 uv run pytest -q               # 单元测试（不需要真实声卡）
 uv run basedpyright            # 类型检查
+uv run ruff check .            # 静态检查（全量规则，见 pyproject.toml 的放行清单）
+uv run ruff format --check .   # 格式检查（改的时候去掉 --check）
 ```
 
-改完任何 Python 代码，**必须**跑 `uv run basedpyright` 和 `uv run pytest -q`。
+改完任何 Python 代码，**必须**跑 `uv run basedpyright`、`uv run ruff check .` 和 `uv run pytest -q`。
 
 ## 硬性规范
 

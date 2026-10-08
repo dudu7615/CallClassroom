@@ -52,17 +52,29 @@ def ensure_cert(host: str) -> tuple[Path, Path]:
 
     alt = ",".join(["DNS:localhost", "IP:127.0.0.1", *[f"IP:{ip}" for ip in local_ips()]])
     cmd = [
-        "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
-        "-days", "825", "-keyout", str(key), "-out", str(cert),
-        "-subj", f"/CN={host or 'callclassroom'}",
-        "-addext", f"subjectAltName={alt}",
+        "openssl",
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "825",
+        "-keyout",
+        str(key),
+        "-out",
+        str(cert),
+        "-subj",
+        f"/CN={host or 'callclassroom'}",
+        "-addext",
+        f"subjectAltName={alt}",
     ]
     logger.info("生成自签证书：{}", cert)
     subprocess.run(cmd, check=True, capture_output=True)
     return cert, key
 
 
-def announce(port: int, tls: bool) -> None:
+def announce(port: int, *, tls: bool) -> None:
     scheme = "https" if tls else "http"
     lines = ["CallClassroom 已启动"]
     lines.extend(f"    {scheme}://{target}:{port}" for target in ["localhost", *local_ips()])
@@ -99,7 +111,7 @@ def main() -> None:
     if cert is not None and key is None:
         parser.error("--cert 需要同时提供 --key")
 
-    announce(args.port, cert is not None)
+    announce(args.port, tls=cert is not None)
 
     uvicorn.run(
         "modules.server:app",

@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import queue
 import threading
+from contextlib import suppress
 from typing import Any
 
 import numpy as np
@@ -189,12 +190,8 @@ class AudioEngine:
 
         for rate in CANDIDATE_RATES:
             try:
-                sd.check_input_settings(
-                    device=in_index, channels=CHANNELS, dtype=DTYPE, samplerate=rate
-                )
-                sd.check_output_settings(
-                    device=out_index, channels=CHANNELS, dtype=DTYPE, samplerate=rate
-                )
+                sd.check_input_settings(device=in_index, channels=CHANNELS, dtype=DTYPE, samplerate=rate)
+                sd.check_output_settings(device=out_index, channels=CHANNELS, dtype=DTYPE, samplerate=rate)
             except Exception:
                 continue
             return rate
@@ -307,11 +304,9 @@ class AudioEngine:
 
     @staticmethod
     def _offer(q: asyncio.Queue[bytes], frame: bytes) -> None:
-        try:
-            q.put_nowait(frame)
-        except asyncio.QueueFull:
+        with suppress(asyncio.QueueFull):
             # 消费者跟不上，丢掉这一帧换取低延迟
-            pass
+            q.put_nowait(frame)
 
     def _out_callback(
         self,

@@ -30,7 +30,7 @@ import asyncio
 import json
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -38,6 +38,9 @@ from loguru import logger
 
 from .audio import AudioEngine
 from .settings import DeviceSelection, SettingsStore
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -48,7 +51,7 @@ store = SettingsStore()
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     # 载入选定的设备。声卡本身不在启动时打开：等第一个操作者连进来再开，
     # 最后一个走了就关，免得没人在线时教室电脑的麦克风指示灯一直亮着。
     selection = store.load()
@@ -100,7 +103,7 @@ class AudioHub:
 
     # ---------------------------------------------------------------- 喊话状态
 
-    def set_talking(self, q: asyncio.Queue[bytes | str], on: bool) -> bool:
+    def set_talking(self, q: asyncio.Queue[bytes | str], *, on: bool) -> bool:
         """标记某个连接是否正在喊话，返回整体状态是否发生了变化。"""
         before = self.talking
         if on:
@@ -143,13 +146,12 @@ class AudioHub:
     async def apply_devices(self, selection: DeviceSelection) -> None:
         """设备选择变了：声卡开着就立刻换过去，没开就只记下参数。"""
         async with self._lifecycle:
-            await asyncio.to_thread(
-                self.engine.reconfigure, selection.in_device, selection.out_device
-            )
+            await asyncio.to_thread(self.engine.reconfigure, selection.in_device, selection.out_device)
 
     async def _pump_mic(self) -> None:
-        assert self._mic_q is not None
         mic_q = self._mic_q
+        if mic_q is None:  # 不该发生：泵只在 subscribe() 之后才启动
+            return
         while True:
             frame = await mic_q.get()
             if self.talking:
@@ -206,7 +208,7 @@ async def api_select_devices(payload: DeviceSelection) -> dict[str, Any]:
 
 
 @app.websocket("/ws")
-async def ws_audio(ws: WebSocket) -> None:
+async def ws_audio(ws: WebSocket) -> None:  # noqa: C901, PLR0912, PLR0915 — 协议分发循环，分支天然多
     await ws.accept()
     out = await hub.connect()
 
@@ -248,7 +250,7 @@ async def ws_audio(ws: WebSocket) -> None:
                     on = bool(payload.get("on"))
                     # 按下和松开都清一次缓冲：开始时不带上残留，结束时立刻静音
                     audio.flush()
-                    if hub.set_talking(out, on):
+                    if hub.set_talking(out, on=on):
                         hub.broadcast({"type": "peer", "talking": hub.talking})
                 case "flush":
                     audio.flush()
