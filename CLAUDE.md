@@ -10,8 +10,9 @@ CallClassroom：单页的教室对讲工具。服务端进程**直接占用教�
 ## 常用命令
 
 ```bash
-uv run main.py                 # 启动（默认 0.0.0.0:8000）
-uv run main.py --tls --reload  # 自签证书 + 热重载
+uv run main.py                 # 启动（默认自签证书 + https://0.0.0.0:8000）
+uv run main.py --reload        # 热重载
+uv run main.py --no-tls        # 退回明文 http，仅本机调试
 uv run pytest -q               # 单元测试（不需要真实声卡）
 uv run basedpyright            # 类型检查
 uv run ruff check .            # 静态检查（全量规则，见 pyproject.toml 的放行清单）
@@ -53,7 +54,8 @@ WebSocket 协议（`/ws`）的完整定义在 `modules/server.py` 的模块文�
 
 2. **浏览器只在安全上下文开放麦克风和 AudioWorklet**（`localhost` 或
    `https://`）。从别的设备用 `http://192.168.x.x:8000` 访问会被直接拒绝。
-   这是 `main.py --tls` 存在的原因，页面里 `requireSecureContext()` 也会提示。
+   所以服务端**默认就开 https**（`main.py` 自动签自签证书），页面里
+   `requireSecureContext()` 也会提示。
    改动 `web/app.js` 时不要假设可以用 `http://` + IP 调试。
 
 3. **半双工是双向的，改一处要同时改另一处**。教室音响放出的喊话会被教室

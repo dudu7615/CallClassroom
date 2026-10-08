@@ -72,13 +72,21 @@
 
 ```bash
 uv sync
-uv run main.py                 # http://0.0.0.0:8000
-uv run main.py --tls           # 自签证书，走 https（跨设备必看下一节）
+uv run main.py                 # https://0.0.0.0:8000（默认自签证书，见下一节）
+uv run main.py --no-tls        # 明文 http://0.0.0.0:8000，仅本机调试用
 uv run main.py --port 9000 -v  # 换端口 + 调试日志
 uv run main.py --reload        # 开发模式，改代码自动重启
 ```
 
 启动后会打印本机所有可访问的 URL。
+
+自签证书第一次运行时生成，之后一直复用（有效期 10 年）。**地址变了才会重签**——
+证书的 SAN 里写死了生成时的网卡 IP，换了网络导致 IP 变化时会重新生成一张，
+浏览器里之前点过的「继续前往」可能得再点一次。
+
+证书是用 [`cryptography`](https://cryptography.io/) 现签的，**不需要系统装
+openssl** 或别的外部命令；除了 PortAudio（见上一节，且没装也只是没声音），
+`uv sync` 之后就能直接跑。
 
 ## ⚠️ 跨设备访问必须用 HTTPS
 
@@ -90,11 +98,12 @@ uv run main.py --reload        # 开发模式，改代码自动重启
 
 | 方案 | 做法 | 适用 |
 |---|---|---|
-| **自签证书**（推荐） | `uv run main.py --tls`，浏览器首次访问点「继续前往」 | 一次性配置，手机也能用 |
+| **自签证书**（默认，推荐） | 直接 `uv run main.py`，浏览器首次访问点「继续前往」 | 一次性配置，手机也能用 |
 | Chrome 白名单 | 在操作者电脑的 `chrome://flags/#unsafely-treat-insecure-origin-as-secure` 里填 `http://192.168.1.20:8000` 并启用 | 仅桌面 Chrome，改完要重启浏览器 |
 | 正式证书反代 | Caddy / nginx 终止 TLS，转发到本服务 | 有域名时最省事 |
 
-只有**在教室电脑本机**用 `http://localhost:8000` 打开时才不需要 https。
+只有**在教室电脑本机**用 `http://localhost:8000` 打开时才不需要 https——这种情况
+加 `--no-tls` 可以省掉那个证书警告。
 
 ## 操作流程
 

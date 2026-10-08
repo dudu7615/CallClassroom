@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "cryptography>=50.0.2",
     "fastapi>=0.141.1",
     "loguru>=0.7.3",
     "numpy>=2.5.3",
@@ -22,6 +23,11 @@ dev = [
     "ruff>=0.16.10",
 ]
 
+[tool.pytest.ini_options]
+# 让 `uv run pytest` 能 import 到 modules/：测试文件在 tests/ 下，pytest 只会把
+# tests/ 加进 sys.path，够不到仓库根目录。
+pythonpath = ["."]
+
 [tool.ruff]
 target-version = "py314"
 line-length = 120
@@ -38,7 +44,6 @@ ignore = [
     "S112",   # try-except-continue：见 AudioEngine.pick_rate()，逐个采样率试探本就该 continue
     "ANN401", # Any：CFFI 回调的 time/status 是 C 结构体，桩里的 **kwargs 也只能是 Any
     "S104",   # 绑定 0.0.0.0：这是局域网对讲工具，监听全网卡是产品设计
-    "S603",   # subprocess：openssl 传的是固定参数列表，无外部输入
     # 与 `ruff format` 冲突、官方要求关闭的两条（否则会和格式化器反复推翻彼此）
     "COM812",
     "ISC001",
