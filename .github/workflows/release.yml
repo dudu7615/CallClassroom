@@ -1,0 +1,106 @@
+name: release
+
+# 合并进 main（或直接推到 main）就出安装包；也可以手动触发，用来验证打包流程没坏。
+#
+# 版本号以 pyproject.toml 里的 version 为准：有对应 tag 才建 Release，没有就
+# 只留 CI 产物。所以想真正发一个版本，就在 PR 里改 version，合并后自动出。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 两次合并挨得很近时排队跑，别互相覆盖 Release
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# softprops/action-gh-release 要往 Release 里传文件
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    # PyInstaller 不支持交叉编译，只能在 Windows runner 上出 Windows 产物
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # 要查 tag 是否已存在，默认的浅克隆拿不到
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: 装 Python 3.14
+        run: uv python install 3.14
+
+      # build 组里有 PyInstaller，默认不装（见 pyproject.toml）
+      - name: 装依赖
+        run: uv sync --frozen --group build
+
+      # 坏版本不该被打成安装包发出去
+      - name: 跑测试
+        run: uv run pytest -q
+
+      - name: PyInstaller 打包
+        run: uv run pyinstaller packaging/CallClassroom.spec --noconfirm --clean
+
+      - name: 装 Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: 读出版本号，判断该不该建 Release
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          $tag = "v$v"
+          git fetch --tags --force --quiet
+          # tag 已经存在 = 这个版本发过了，只跑构建、不再建 Release
+          $isNew = -not (git tag --list $tag)
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "release=$($isNew.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          Write-Host "版本 $v，tag $tag，是否新建 Release：$isNew"
+
+      - name: 生成安装包
+        shell: pwsh
+        run: |
+          # choco 装的是 6 还是 7 不确定，直接找 ISCC.exe，别写死路径
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*\ISCC.exe",
+                                 "C:\Program Files\Inno Setup*\ISCC.exe" |
+                  Select-Object -First 1 -ExpandProperty FullName
+          if (-not $iscc) { throw "找不到 ISCC.exe" }
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.version }}" packaging\setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC 失败" }
+
+      # 顺带发个免安装版，方便本机先试
+      - name: 打包便携版
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\CallClassroom\* `
+            -DestinationPath "dist\CallClassroom-portable-${{ steps.ver.outputs.version }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CallClassroom-windows-${{ steps.ver.outputs.version }}
+          path: |
+            dist/installer/*.exe
+            dist/CallClassroom-portable-*.zip
+
+      - uses: softprops/action-gh-release@v2
+        if: steps.ver.outputs.release == 'true'
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: CallClassroom ${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/installer/*.exe
+            dist/CallClassroom-portable-*.zip
+
+      - name: 版本号没变，跳过 Release
+        if: steps.ver.outputs.release != 'true'
+        shell: pwsh
+        run: |
+          Write-Host "::notice::pyproject.toml 的版本仍是 ${{ steps.ver.outputs.version }}，已存在同名 Release。"
+          Write-Host "::notice::安装包已作为 CI 产物上传。要发新版本，请先在 PR 里改 pyproject.toml 的 version 再合并。"

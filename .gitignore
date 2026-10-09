@@ -12,5 +12,9 @@ wheels/
 # 本地自签证书
 .certs/
 
+# 本机选定的教室设备（设备名因机而异，不入库）
+settings.json
+
 # 测试与工具缓存
 .pytest_cache/
+.ruff_cache/
